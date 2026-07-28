@@ -1,0 +1,40 @@
+# --- Secrets. Nothing from here may ever reach git ---
+.env
+.env.*
+!.env.example
+*.key
+API KEY.txt
+secrets/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# --- Tooling ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Data and artifacts ---
+data/
+*.db
+*.sqlite3
+.netshift/
+
+# --- Local tool settings ---
+# Claude Code permissions for this machine. Personal, not team-wide.
+.claude/settings.local.json
+
+# --- IDE / OS ---
+.vs/
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini

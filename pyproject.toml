@@ -1,0 +1,57 @@
+[project]
+name = "netshift"
+version = "0.1.0"
+description = "Inspect legacy .NET projects and plan their migration"
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.15",
+    "rich>=13.9",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+]
+
+[project.optional-dependencies]
+# Installed separately once Docker is available: uv sync --extra postgres
+postgres = ["psycopg[binary]>=3.2"]
+# Phase 3: LLM and RAG
+llm = ["anthropic>=0.40", "httpx>=0.28"]
+
+[project.scripts]
+netshift = "netshift.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.9",
+    "mypy>=1.14",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/netshift"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
+
+# The Postgres driver is an optional extra (uv sync --extra postgres).
+# mypy must not fall apart when it is absent.
+[[tool.mypy.overrides]]
+module = "psycopg.*"
+ignore_missing_imports = true

@@ -1,0 +1,33 @@
+# Local infrastructure. Comes up once Docker Desktop is installed.
+#
+# The pgvector/pgvector image is plain Postgres plus the vector-search
+# extension. Chosen up front so phase 3 (RAG) does not force recreating the
+# volume: the extension is enabled by one line in docker/init/01-extensions.sql.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: netshift-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-netshift}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-netshift_local_only}
+      POSTGRES_DB: ${POSTGRES_DB:-netshift}
+    ports:
+      # Bound to localhost only. Without the 127.0.0.1 prefix Docker publishes
+      # on every interface and punches straight through the Windows firewall.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # "Container started" and "database accepts queries" are different events,
+      # and without this the first test loses that race.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-netshift} -d ${POSTGRES_DB:-netshift}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  pgdata:

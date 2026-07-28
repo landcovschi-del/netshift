@@ -1,0 +1,16 @@
+# The repository stores LF; Windows working copies get CRLF on checkout.
+# Without this file a teammate on Linux sees your entire codebase as modified.
+* text=auto eol=lf
+
+# PowerShell on Windows is more reliable with CRLF.
+*.ps1 text eol=crlf
+
+# Makefile and shell scripts must be LF: CRLF breaks both make and bash.
+Makefile text eol=lf
+*.sh text eol=lf
+
+# Leave binaries alone.
+*.png binary
+*.jpg binary
+*.zip binary
+*.dll binary

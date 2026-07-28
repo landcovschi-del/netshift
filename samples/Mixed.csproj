@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net472</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Version given as a child element, which is also legal MSBuild. -->
+    <PackageReference Include="Dapper">
+      <Version>2.1.35</Version>
+    </PackageReference>
+    <!-- No version at all here: the build is not reproducible. -->
+    <PackageReference Include="AutoMapper" />
+  </ItemGroup>
+
+</Project>

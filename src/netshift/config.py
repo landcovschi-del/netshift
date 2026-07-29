@@ -31,14 +31,23 @@ class Settings(BaseSettings):
     postgres_user: str = "netshift"
     postgres_password: str = "netshift_local_only"
     postgres_db: str = "netshift"
-    postgres_host: str = "localhost"
+    # 127.0.0.1, not "localhost". On Windows the name resolves to the IPv6
+    # address ::1 first, docker-compose publishes the port on IPv4 only, and
+    # Docker Desktop swallows the connection attempt instead of refusing it --
+    # so the client waits instead of failing. Using the address skips the
+    # resolver entirely.
+    postgres_host: str = "127.0.0.1"
     postgres_port: int = 5432
+    postgres_connect_timeout: int = 10
 
     @property
     def postgres_dsn(self) -> str:
+        # A network client with no timeout turns an outage into a hang, and a
+        # hang costs far more to debug than an error.
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+            f"?connect_timeout={self.postgres_connect_timeout}"
         )
 
     @property

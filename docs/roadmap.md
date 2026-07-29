@@ -30,15 +30,23 @@ tested without a single file on disk.
 
 **Skill:** the devops half. What separates a script from a system.
 
-- [ ] Docker Desktop + WSL 2; `make up` brings Postgres to healthy
-- [ ] `NETSHIFT_STORE=postgres` works and `netshift list` shows stored reports
+- [x] Docker Desktop + WSL 2; `make up` brings Postgres to healthy
+- [x] `NETSHIFT_STORE=postgres` works and `netshift list` shows stored reports
 - [ ] Integration tests for `PostgresReportStore` -- the same contract test
       that already exists, against a real database; marked so they skip when
       Docker is not running
 - [ ] Alembic: the schema stops being created on the fly. The .NET equivalent
       is EF Core Migrations
-- [ ] GitHub Actions green on both Linux and Windows
+- [x] GitHub Actions green on both Linux and Windows
 - [ ] Structured logging instead of `print`
+
+Lesson from getting the store working, worth keeping: the default host was
+`localhost`, which on Windows resolves to `::1` before `127.0.0.1`. The port is
+published on IPv4 only, and Docker Desktop swallows the connection attempt
+instead of refusing it, so psycopg waited forever. Two changes fixed it -- use
+the address instead of the name, and give every network client a timeout. The
+second one matters more: without a timeout an outage becomes a hang, and a hang
+is far more expensive to debug than an error.
 
 **Done when:** a fresh clone on someone else's machine passes
 `make setup && make up && make check` with no manual steps.

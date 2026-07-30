@@ -85,6 +85,18 @@ make check
 Run `check` before saying anything is done. Not "should work" -- run it and
 show the output.
 
+## Session hygiene
+
+The repository is the project's memory; a chat thread is not. Anything that
+must outlive the session belongs in a file: a roadmap checkbox, an ADR, a
+commit message, a comment next to the surprising line. If it exists only in
+the conversation, treat it as lost.
+
+One session covers one coherent unit of work, and ends at a commit that is
+pushed. Before that point: run `check`, tick what got done in
+`docs/roadmap.md`, and write down any decision whose alternative was
+non-obvious -- including the alternative and why it lost.
+
 ## Reporting
 
 - A test failed: show the output, do not paraphrase it.

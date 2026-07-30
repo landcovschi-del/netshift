@@ -5,8 +5,9 @@ stands in the way of moving to modern .NET: out-of-support frameworks,
 Windows-only dependencies, unpinned package versions.
 
 A learning project. The goal is a move from .NET development into AI
-engineering with devops skills; the phased plan is in
-[docs/roadmap.md](docs/roadmap.md). Instructions for Claude Code are in
+engineering with devops skills. Why this project and what it is meant to
+teach: [docs/why-this-project.md](docs/why-this-project.md). The phased plan:
+[docs/roadmap.md](docs/roadmap.md). Instructions for Claude Code:
 [CLAUDE.md](CLAUDE.md).
 
 ## Quick start

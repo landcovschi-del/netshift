@@ -58,20 +58,32 @@ def test_class_without_required_methods_does_not_satisfy_protocol() -> None:
     assert not isinstance(NotAStore(), ReportStore)
 
 
-def test_store_contract_holds_for_both_implementations() -> None:
-    """One set of expectations, applied to the real adapter and to the double.
+def assert_store_contract(store: ReportStore) -> None:
+    """Expectations that every ReportStore implementation must satisfy.
 
-    The technique is called a contract test: when PostgresReportStore arrives,
-    adding it to this list is all the coverage it needs.
+    Deliberately not named test_*: pytest would collect it as a test and fail on
+    the missing argument. As a plain function it can be imported anywhere, so
+    one copy of the contract covers every implementation, in this file and in
+    others.
+
+    The store passed in must be empty.
+
+    The store returns a report equal to the stored one; the same object is not
+    required, otherwise no out-of-process implementation would be able to
+    satisfy the contract.
     """
     report = ProjectReport(name="Contoso", style=ProjectStyle.SDK, target_frameworks=["net8.0"])
 
-    stores: list[ReportStore] = [InMemoryReportStore(), FakeStore()]
-    for store in stores:
-        assert store.get("Contoso") is None
-        assert store.list_names() == []
+    assert store.get("Contoso") is None
+    assert store.list_names() == []
 
-        store.save(report)
+    store.save(report)
 
-        assert store.get("Contoso") is report
-        assert store.list_names() == ["Contoso"]
+    assert store.get("Contoso") == report
+    assert store.list_names() == ["Contoso"]
+
+
+def test_store_contract_holds_for_both_implementations() -> None:
+    """The contract, applied to the real in-memory adapter and to the double."""
+    for store in (InMemoryReportStore(), FakeStore()):
+        assert_store_contract(store)

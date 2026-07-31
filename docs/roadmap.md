@@ -32,7 +32,7 @@ tested without a single file on disk.
 
 - [x] Docker Desktop + WSL 2; `make up` brings Postgres to healthy
 - [x] `NETSHIFT_STORE=postgres` works and `netshift list` shows stored reports
-- [ ] Integration tests for `PostgresReportStore` -- the same contract test
+- [x] Integration tests for `PostgresReportStore` -- the same contract test
       that already exists, against a real database; marked so they skip when
       Docker is not running
 - [ ] Alembic: the schema stops being created on the fly. The .NET equivalent

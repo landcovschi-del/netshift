@@ -37,6 +37,7 @@ packages = ["src/netshift"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["integration: needs a running Postgres"]
 
 [tool.ruff]
 line-length = 100

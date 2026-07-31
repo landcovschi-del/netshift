@@ -37,8 +37,54 @@ tested without a single file on disk.
       Docker is not running
 - [ ] Alembic: the schema stops being created on the fly. The .NET equivalent
       is EF Core Migrations
-- [x] GitHub Actions green on both Linux and Windows
+- [ ] GitHub Actions green on both Linux and Windows -- was true, is not any
+      more. See "CI is red" below
 - [ ] Structured logging instead of `print`
+
+**CI is red since `ce74eae`, and the box above was unticked because of it.**
+The workflow installs with `uv sync --locked`, which does not include the
+`postgres` extra -- `uv sync --locked --dry-run` reports it would uninstall
+psycopg. `tests/test_postgres_store.py` imports psycopg at module level, so
+collection fails before any test runs. `pytest.mark.integration` does not help:
+the marker is evaluated when a test runs, the import when the module is
+collected. The .NET parallel is `[Fact(Skip=...)]` on a class that cannot be
+loaded because an assembly is missing.
+
+Three ways out, none picked yet:
+
+- `pytest.importorskip("psycopg")` in the test module -- one line, CI green
+  everywhere, workflow untouched
+- `--extra postgres` in CI without a database -- the import succeeds and the
+  fixture skips, so the test still never executes. Green that verifies
+  nothing; the worst kind
+- `--extra postgres` plus a Postgres service container -- the integration test
+  actually runs. This is what the "Done when" below asks for, and it is the
+  natural moment to add `alembic upgrade head` to CI as well
+
+Current thinking: the one-line fix now as its own commit, the service container
+together with the Alembic work.
+
+### Next session: Alembic
+
+Decided before starting, so the reasoning is not re-derived:
+
+- Migrations are written as raw SQL through `op.execute()`. Alembic with
+  SQLAlchemy models and `--autogenerate` was rejected: it would put the schema
+  in two places at once and pull an ORM into a project that deliberately has
+  none. A hand-rolled runner (a folder of `.sql` files plus a `schema_version`
+  table) was also rejected -- it teaches the mechanism but buys a skill nobody
+  else uses, while Alembic is the direct counterpart of EF Core Migrations
+- The cost is six packages, SQLAlchemy among them as a hard dependency of
+  alembic. Open question: whether alembic belongs in the `postgres` extra next
+  to psycopg, or in the main dependencies
+- `migrations/env.py` must take the DSN from `load_settings()`, not from
+  `sqlalchemy.url` in `alembic.ini`. Watch out: SQLAlchemy needs the
+  `postgresql+psycopg://` scheme for psycopg 3, and `Settings.postgres_dsn`
+  produces a plain `postgresql://` one
+- Dropping `_SCHEMA` from the store constructor changes the failure mode: on a
+  database that was never migrated the first query now raises `UndefinedTable`.
+  That is the point of the change, but the message has to be a readable one --
+  where to catch it, in the store or in `doctor`, is undecided
 
 Lesson from getting the store working, worth keeping: the default host was
 `localhost`, which on Windows resolves to `::1` before `127.0.0.1`. The port is

@@ -35,44 +35,55 @@ tested without a single file on disk.
 - [x] Integration tests for `PostgresReportStore` -- the same contract test
       that already exists, against a real database; marked so they skip when
       Docker is not running
-- [ ] Alembic: the schema stops being created on the fly. The .NET equivalent
-      is EF Core Migrations
-- [ ] GitHub Actions green on both Linux and Windows -- was true, is not any
-      more. See "CI is red" below
+- [x] GitHub Actions green on both Linux and Windows -- broke, fixed, see below
 - [ ] Structured logging instead of `print`
+- [~] Alembic -- deliberately deferred to phase 3, see below
 
-**CI is red since `ce74eae`, and the box above was unticked because of it.**
-The workflow installs with `uv sync --locked`, which does not include the
-`postgres` extra -- `uv sync --locked --dry-run` reports it would uninstall
-psycopg. `tests/test_postgres_store.py` imports psycopg at module level, so
-collection fails before any test runs. `pytest.mark.integration` does not help:
-the marker is evaluated when a test runs, the import when the module is
-collected. The .NET parallel is `[Fact(Skip=...)]` on a class that cannot be
-loaded because an assembly is missing.
+**How CI broke and what fixed it.** Between `ce74eae` and `5fcdebc` the
+workflow was red and the box above was ticked anyway. The workflow installs
+with `uv sync --locked`, which does not include the `postgres` extra --
+`uv sync --locked --dry-run` reports it would uninstall psycopg.
+`tests/test_postgres_store.py` imported psycopg at module level, so collection
+died before a single test ran. `pytest.mark.integration` could not save it:
+the marker is read when a test runs, the import when the module is collected.
+The .NET parallel is `[Fact(Skip=...)]` on a class that never loads because an
+assembly is missing.
 
-Three ways out, none picked yet:
+Fixed with `pytest.importorskip("psycopg")` in place of the import. Verified by
+reproducing CI exactly -- `uv sync --locked` then pytest: 16 passed, 1 skipped.
 
-- `pytest.importorskip("psycopg")` in the test module -- one line, CI green
-  everywhere, workflow untouched
-- `--extra postgres` in CI without a database -- the import succeeds and the
-  fixture skips, so the test still never executes. Green that verifies
-  nothing; the worst kind
-- `--extra postgres` plus a Postgres service container -- the integration test
-  actually runs. This is what the "Done when" below asks for, and it is the
-  natural moment to add `alembic upgrade head` to CI as well
+Two heavier options lost. Adding `--extra postgres` to CI without a database
+would make the import succeed and the fixture skip -- green that verifies
+nothing, the worst kind. Adding a Postgres service container as well would make
+the integration test genuinely run; that is what "Done when" below asks for, so
+it is still owed, just not bought with a broken build in the meantime.
 
-Current thinking: the one-line fix now as its own commit, the service container
-together with the Alembic work.
+The general lesson is worth more than the fix: an optional dependency is only
+optional if nothing imports it unconditionally, and a test marker is not an
+import guard.
 
-### Next session: Alembic
+### Why Alembic is deferred, and what will un-defer it
 
-Decided before starting, so the reasoning is not re-derived:
+Migrations pay off when there is data worth keeping, a schema that changes, and
+more than one environment. As of now none of the three holds: one table, the
+whole payload in JSONB (so a change to the report format does not touch the
+schema at all), and a local database that `make reset` throws away without
+regret. `CREATE TABLE IF NOT EXISTS` in the store constructor is honestly
+enough for that, and doing Alembic now would be a milestone spent translating
+EF Core Migrations into different function names -- exactly the failure mode
+`docs/why-this-project.md` warns about.
 
-- Migrations are written as raw SQL through `op.execute()`. Alembic with
+**The trigger is phase 3 step 4:** the embeddings table and its pgvector index.
+That is a second table, a real schema, and the moment the shortcut stops being
+one. Do it then, in passing, together with the CI service container.
+
+Decisions already made, so they are not re-derived at that point:
+
+- Migrations get written as raw SQL through `op.execute()`. Alembic with
   SQLAlchemy models and `--autogenerate` was rejected: it would put the schema
   in two places at once and pull an ORM into a project that deliberately has
   none. A hand-rolled runner (a folder of `.sql` files plus a `schema_version`
-  table) was also rejected -- it teaches the mechanism but buys a skill nobody
+  table) was rejected too -- it teaches the mechanism but buys a skill nobody
   else uses, while Alembic is the direct counterpart of EF Core Migrations
 - The cost is six packages, SQLAlchemy among them as a hard dependency of
   alembic. Open question: whether alembic belongs in the `postgres` extra next
@@ -82,9 +93,12 @@ Decided before starting, so the reasoning is not re-derived:
   `postgresql+psycopg://` scheme for psycopg 3, and `Settings.postgres_dsn`
   produces a plain `postgresql://` one
 - Dropping `_SCHEMA` from the store constructor changes the failure mode: on a
-  database that was never migrated the first query now raises `UndefinedTable`.
-  That is the point of the change, but the message has to be a readable one --
-  where to catch it, in the store or in `doctor`, is undecided
+  database that was never migrated the first query starts raising
+  `UndefinedTable`. That is the point of the change -- an application has no
+  business altering the schema of production at startup, the same argument as
+  `Database.Migrate()` on boot versus a separate deployment step in .NET. But
+  the message has to be readable, and where to catch it, in the store or in
+  `doctor`, is undecided
 
 Lesson from getting the store working, worth keeping: the default host was
 `localhost`, which on Windows resolves to `::1` before `127.0.0.1`. The port is
